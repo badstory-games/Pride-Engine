@@ -1,0 +1,132 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    overflow: hidden;
+    height: 100vh;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#toolbar {
+    background: #16213e;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #0f3460;
+    height: 60px;
+}
+
+#toolbar h1 {
+    font-size: 24px;
+    background: linear-gradient(45deg, #e94560, #0f3460);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: bold;
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    background: #0f3460;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #e94560;
+}
+
+#workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#viewport-container {
+    flex: 1;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#game-canvas {
+    border: 1px solid #0f3460;
+}
+
+#editor-panels {
+    width: 350px;
+    background: #16213e;
+    display: flex;
+    flex-direction: column;
+    border-left: 2px solid #0f3460;
+}
+
+.panel {
+    padding: 15px;
+    border-bottom: 1px solid #0f3460;
+}
+
+.panel h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #e94560;
+}
+
+#scene-hierarchy {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#inspector {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#console {
+    height: 200px;
+    overflow-y: auto;
+}
+
+#console-output {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #00ff00;
+}
+
+.entity-item {
+    padding: 8px;
+    margin: 4px 0;
+    background: #0f3460;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.entity-item:hover {
+    background: #e94560;
+}
+
+.entity-item.selected {
+    background: #533483;
+}

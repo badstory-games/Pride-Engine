@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pride Engine - Редактор</title>
+    <link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Панель инструментов -->
+        <div id="toolbar">
+            <h1>Pride Engine</h1>
+            <div class="toolbar-buttons">
+                <button id="btn-play">▶ Запустить</button>
+                <button id="btn-stop">■ Стоп</button>
+                <button id="btn-pause">⏸ Пауза</button>
+                <button id="btn-add-entity">+ Добавить сущность</button>
+                <button id="btn-save">💾 Сохранить</button>
+                <button id="btn-load">📂 Загрузить</button>
+            </div>
+        </div>
+
+        <!-- Основная рабочая область -->
+        <div id="workspace">
+            <!-- Viewport для игры -->
+            <div id="viewport-container">
+                <canvas id="game-canvas"></canvas>
+            </div>
+
+            <!-- Панели редактора -->
+            <div id="editor-panels">
+                <!-- Иерархия сцены -->
+                <div class="panel" id="scene-hierarchy">
+                    <h2>Иерархия сцены</h2>
+                    <div id="entity-list"></div>
+                </div>
+
+                <!-- Инспектор свойств -->
+                <div class="panel" id="inspector">
+                    <h2>Инспектор</h2>
+                    <div id="component-list"></div>
+                </div>
+
+                <!-- Консоль -->
+                <div class="panel" id="console">
+                    <h2>Консоль</h2>
+                    <div id="console-output"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
