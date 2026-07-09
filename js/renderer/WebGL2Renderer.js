@@ -4,7 +4,8 @@
  */
 
 import { System } from '../core/System.js';
-import { TransformComponent, RenderComponent } from '../core/Component.js';
+import { TransformComponent } from '../components/TransformComponent.js';
+import { RenderComponent } from '../components/RenderComponent.js';
 
 /**
  * @class WebGL2Renderer
@@ -21,6 +22,9 @@ export class WebGL2Renderer extends System {
         
         /** @type {Object} */
         this.uniforms = {};
+        
+        /** @type {boolean} */
+        this.initialized = false;
     }
     
     /**
@@ -28,6 +32,8 @@ export class WebGL2Renderer extends System {
      * @param {WebGL2RenderingContext} gl - Контекст WebGL2
      */
     init(gl) {
+        if (this.initialized) return;
+        
         // Вершинный шейдер
         const vertexShaderSource = `#version 300 es
             in vec2 a_position;
@@ -66,12 +72,13 @@ export class WebGL2Renderer extends System {
             precision mediump float;
             
             uniform vec4 u_color;
+            uniform float u_opacity;
             in vec2 v_texCoord;
             
             out vec4 outColor;
             
             void main() {
-                outColor = u_color;
+                outColor = u_color * u_opacity;
             }
         `;
         
@@ -79,8 +86,18 @@ export class WebGL2Renderer extends System {
         const vertexShader = this.createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
         const fragmentShader = this.createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
         
+        if (!vertexShader || !fragmentShader) {
+            console.error('Не удалось скомпилировать шейдеры');
+            return;
+        }
+        
         // Создаем программу
         this.program = this.createProgram(gl, vertexShader, fragmentShader);
+        
+        if (!this.program) {
+            console.error('Не удалось создать программу шейдеров');
+            return;
+        }
         
         // Получаем расположения uniforms
         this.uniforms = {
@@ -88,7 +105,8 @@ export class WebGL2Renderer extends System {
             translation: gl.getUniformLocation(this.program, 'u_translation'),
             scale: gl.getUniformLocation(this.program, 'u_scale'),
             rotation: gl.getUniformLocation(this.program, 'u_rotation'),
-            color: gl.getUniformLocation(this.program, 'u_color')
+            color: gl.getUniformLocation(this.program, 'u_color'),
+            opacity: gl.getUniformLocation(this.program, 'u_opacity')
         };
         
         // Создаем буфер вершин
@@ -97,10 +115,10 @@ export class WebGL2Renderer extends System {
         
         // Вершины прямоугольника (два треугольника)
         const positions = [
-            0, 0,
+            0, 0,   // Первый треугольник
             0, 1,
             1, 0,
-            1, 0,
+            1, 0,   // Второй треугольник
             0, 1,
             1, 1,
         ];
@@ -108,8 +126,12 @@ export class WebGL2Renderer extends System {
         
         // Настраиваем атрибуты
         const positionAttributeLocation = gl.getAttribLocation(this.program, 'a_position');
-        gl.enableVertexAttribArray(positionAttributeLocation);
-        gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+        if (positionAttributeLocation !== -1) {
+            gl.enableVertexAttribArray(positionAttributeLocation);
+            gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+        }
+        
+        this.initialized = true;
     }
     
     /**
@@ -117,7 +139,7 @@ export class WebGL2Renderer extends System {
      * @param {WebGL2RenderingContext} gl
      * @param {number} type - Тип шейдера
      * @param {string} source - Исходный код шейдера
-     * @returns {WebGLShader}
+     * @returns {WebGLShader|null}
      */
     createShader(gl, type, source) {
         const shader = gl.createShader(type);
@@ -138,7 +160,7 @@ export class WebGL2Renderer extends System {
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLShader} vertexShader
      * @param {WebGLShader} fragmentShader
-     * @returns {WebGLProgram}
+     * @returns {WebGLProgram|null}
      */
     createProgram(gl, vertexShader, fragmentShader) {
         const program = gl.createProgram();
@@ -161,27 +183,45 @@ export class WebGL2Renderer extends System {
      * @param {Entity[]} entities
      */
     render(gl, entities) {
-        if (!this.program) {
+        if (!this.initialized) {
             this.init(gl);
         }
+        
+        if (!this.program) return;
         
         gl.useProgram(this.program);
         
         // Устанавливаем разрешение
         gl.uniform2f(this.uniforms.resolution, gl.canvas.width, gl.canvas.height);
         
-        for (const entity of entities) {
-            if (!entity.active) continue;
-            
+        // Сортируем сущности по z-index
+        const renderableEntities = entities
+            .filter(entity => {
+                if (!entity.active) return false;
+                const render = entity.getComponent(RenderComponent);
+                return render && render.visible;
+            })
+            .sort((a, b) => {
+                const renderA = a.getComponent(RenderComponent);
+                const renderB = b.getComponent(RenderComponent);
+                return (renderA.zIndex || 0) - (renderB.zIndex || 0);
+            });
+        
+        for (const entity of renderableEntities) {
             const transform = entity.getComponent(TransformComponent);
             const render = entity.getComponent(RenderComponent);
             
-            if (!transform || !render || !render.visible) continue;
+            if (!transform || !render) continue;
             
             // Устанавливаем uniforms для этой сущности
             gl.uniform2f(this.uniforms.translation, transform.x, transform.y);
-            gl.uniform2f(this.uniforms.scale, render.width * transform.scaleX, render.height * transform.scaleY);
+            gl.uniform2f(
+                this.uniforms.scale, 
+                render.width * transform.scaleX, 
+                render.height * transform.scaleY
+            );
             gl.uniform1f(this.uniforms.rotation, transform.rotation);
+            gl.uniform1f(this.uniforms.opacity, render.opacity);
             
             // Парсим цвет
             const color = this.parseColor(render.color);
@@ -201,11 +241,20 @@ export class WebGL2Renderer extends System {
         // Поддержка hex цветов
         if (color.startsWith('#')) {
             const hex = color.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16) / 255;
+            const g = parseInt(hex.substring(2, 4), 16) / 255;
+            const b = parseInt(hex.substring(4, 6), 16) / 255;
+            return { r, g, b, a: 1.0 };
+        }
+        
+        // Поддержка rgb/rgba
+        const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (rgbMatch) {
             return {
-                r: parseInt(hex.substr(0, 2), 16) / 255,
-                g: parseInt(hex.substr(2, 2), 16) / 255,
-                b: parseInt(hex.substr(4, 2), 16) / 255,
-                a: 1.0
+                r: parseInt(rgbMatch[1]) / 255,
+                g: parseInt(rgbMatch[2]) / 255,
+                b: parseInt(rgbMatch[3]) / 255,
+                a: rgbMatch[4] ? parseFloat(rgbMatch[4]) : 1.0
             };
         }
         
